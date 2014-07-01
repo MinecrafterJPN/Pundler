@@ -1,0 +1,31 @@
+# You can group some plugins.
+# If you specify a group name when installing, the plugins in the group are installed.
+# If you omit a group name, the plugins in "default" group are installed by default.
+
+default:
+ dummyplugin: # This is dummy!
+  version: ~
+
+# example
+
+#group1:
+ #plugin1:
+  #version: ~
+# If you set ~ to "version", the latest version will be installed.
+
+ #plugin2:
+  #version: < 1.3
+# Version less than 1.3
+
+ #plugin3:
+  #version: > 1.9
+# Version more than 1.9
+
+ #plugin4:
+  #version: <= 1.3
+ #plugin5:
+  #version: >= 1.9
+
+ #plugin6:
+  #version: 1.3 ~ 1.9
+# You can spesify a version like this.

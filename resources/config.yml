@@ -1,0 +1,18 @@
+# Check if there are the updates of a selected group automatically
+# group: (string) target group
+# at_startup: (bool) Check at startup
+# at_shutdown: (bool) Check at shutdown
+auto_update:
+ group: default
+ at_startup: false
+ at_shutdown: false
+
+# The interval of fetching repository
+# If this value is too small, your operation with Pundler may take a long time
+# You should set 1500 ~ 2000 to this value
+# minimum_fetch_interval: (int) second
+minimum_fetch_interval: 1800
+
+# Forum API URL
+# forum_api_url: (string)
+forum_api_url: "http://forums.pocketmine.net/api.php"

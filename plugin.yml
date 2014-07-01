@@ -1,0 +1,20 @@
+name: Pundler
+main: Pundler\Pundler
+version: 1.0.0
+api: [1.0.0]
+load: POSTWORLD
+author: MinecrafterJPN
+description: Manage your plugins simply
+commands:
+ pundler:
+  description: Pundler command
+  usage: "/pundler <install | update | clean | all>"
+  permission: pundler.command
+permissions:
+ pundler:
+  default: op
+  description: Allows using all the Pundler things
+  children:
+   pundler.command:
+    default: op
+    description: Allows using all the Pundler commands
