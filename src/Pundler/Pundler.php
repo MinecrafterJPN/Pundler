@@ -14,7 +14,7 @@ use pocketmine\utils\TextFormat;
 
 class Pundler extends PluginBase
 {
-    private $pundlePath, $lastFetch, $repository;
+    private $lastFetch, $repository;
 
     public function onLoad()
     {
@@ -25,10 +25,6 @@ class Pundler extends PluginBase
         $this->saveDefaultConfig();
         $this->reloadConfig();
 
-        $pundleFileName = "pundle.yml";
-        $this->saveResource($pundleFileName);
-        $this->pundlePath = $this->getDataFolder() . $pundleFileName;
-
         $this->lastFetch = 0;
         $this->repository = array();
 
@@ -36,7 +32,7 @@ class Pundler extends PluginBase
 
         if ($this->getConfig()->get("auto_update")['at_startup']) {
             $this->getLogger()->info("Checking updates automatically...");
-            $this->update(true);
+            $this->update();
         }
     }
 
@@ -44,7 +40,7 @@ class Pundler extends PluginBase
     {
         if ($this->getConfig()->get("auto_update")['at_shutdown']) {
             $this->getLogger()->info("Checking updates automatically...");
-            $this->update(true);
+            $this->update();
         }
     }
 
@@ -76,6 +72,10 @@ class Pundler extends PluginBase
                         $this->update($group);
                         break;
 
+                    case "doctor":
+                        $this->doctor();
+                        break;
+
                     default:
                         return false;
                 }
@@ -87,9 +87,9 @@ class Pundler extends PluginBase
         return true;
     }
 
-    private function fetchRepository($force = false)
+    private function fetchRepository()
     {
-        if ($force === false and time() - $this->lastFetch <= $this->getConfig()->get("minimum_fetch_interval")) {
+        if (time() - $this->lastFetch <= $this->getConfig()->get("minimum_fetch_interval")) {
             $this->getLogger()->info("Skipped fetching repository...");
             return;
         }
@@ -120,14 +120,14 @@ class Pundler extends PluginBase
         $this->lastFetch = time();
     }
 
-    private function install($name, $force = false)
+    private function install($name)
     {
         if ($this->getServer()->getPluginManager()->getPlugin($name) !== null) {
             $this->getLogger()->error("\"$name\" is already installed");
             return;
         }
 
-        $this->fetchRepository($force);
+        $this->fetchRepository();
 
         if (!isset($this->repository[$name])) {
             $this->getLogger()->error("\"$name\" dose not exist in the repository!");
@@ -168,30 +168,9 @@ class Pundler extends PluginBase
         }
     }
 
-//    private function install($force = false)
-//    {
-//        $pundle = yaml_parse_file($this->pundlePath);
-//        if (!isset($pundle[$group])) {
-//            $this->getLogger()->error("Group \"$group\" dose not exist!");
-//            return;
-//        }
-//        $this->fetchRepository($force);
-//        $this->getLogger()->info("Target group: $group");
-//
-//        $targetGroup = $pundle[$group];
-//        $numOfInstalledPlugins = 0;
-//
-//        foreach ($targetGroup as $name => $info) {
-//            if ($name === "Pundler") continue;
-//
-//
-//        }
-//        $this->getLogger()->info("Successfully installed $numOfInstalledPlugins plugins");
-//    }
-
-    private function update($force = false)
+    private function update()
     {
-        $this->fetchRepository($force);
+        $this->fetchRepository();
 
         $numOfUpdated = 0;
 
@@ -217,90 +196,24 @@ class Pundler extends PluginBase
         $this->getLogger()->info("Successfully updated $numOfUpdated plugins");
     }
 
-//    private function clean()
-//    {
-//        $pundle = yaml_parse_file($this->pundlePath);
-//        if (!isset($pundle[$group])) {
-//            $this->getLogger()->error("Group \"$group\" dose not exist!");
-//            return;
-//        }
-//        $this->getLogger()->info("Target group: $group");
-//        $targetGroup = $pundle[$group];
-//        $numOfCleanedPlugins = 0;
-//
-//        foreach ($this->getServer()->getPluginManager()->getPlugins() as $name => $plugin) {
-//            if ($name === "Pundler") continue;
-//
-//            $found = false;
-//            foreach ($targetGroup as $n => $info) {
-//                if ($name === $n) {
-//                    $found = true;
-//                    break;
-//                }
-//            }
-//            if (!$found) {
-//                $this->getLogger()->info("Uninstalling $name...");
-//                $this->getServer()->getPluginManager()->disablePlugin($plugin);
-//                if (unlink($this->getServer()->getPluginPath() . $name . ".phar")) $numOfCleanedPlugins++;
-//            }
-//        }
-//        $this->getLogger()->info("Successfully cleaned $numOfCleanedPlugins plugins");
-//
-//    }
-//
-//    private function analyzeVersionString($string)
-//    {
-//        $info = explode(" ", $string);
-//        if (is_numeric($info[0])) {
-//            $version1 = $info[0];
-//            if (isset($info[1]) and $info[1] === "~" and isset($info[2]) and is_numeric($info[2])) {
-//                $version2 = $info[2];
-//                return function($currentVersion, $latestVersion) use($version1, $version2) {
-//                    return ($version1 <= $latestVersion and $latestVersion <= $version2 and $currentVersion < $latestVersion);
-//                };
-//
-//            } else {
-//                //TODO: 最新版が指定バージョンより新しい場合、Historyページを探して指定バージョンをインストールするようにする
-//                return function($currentVersion, $latestVersion) use($version1) {
-//                    return ($latestVersion === $version1) and ($currentVersion !== $version1);
-//                };
-//            }
-//
-//        } else {
-//            if (isset($info[1])) {
-//                $condition = $info[0];
-//                $version = $info[1];
-//                switch ($condition) {
-//                    case ">":
-//                        return function($currentVersion, $latestVersion) use($version) {
-//                            return ($latestVersion > $version) and ($currentVersion < $latestVersion);
-//                        };
-//
-//                    case ">=":
-//                        return function($currentVersion, $latestVersion) use($version) {
-//                            return ($latestVersion >= $version) and ($currentVersion < $latestVersion);
-//                        };
-//
-//                    case "<":
-//                        return function($currentVersion, $latestVersion) use($version) {
-//                            return ($latestVersion < $version) and ($currentVersion < $latestVersion);
-//                        };
-//
-//                    case "<=":
-//                        return function($currentVersion, $latestVersion) use($version) {
-//                            return ($latestVersion <= $version) and ($currentVersion < $latestVersion);
-//                        };
-//
-//                    default:
-//                        return function($currentVersion, $latestVersion) {
-//                            return ($currentVersion < $latestVersion);
-//                        };
-//                }
-//            } else {
-//                return function($currentVersion, $latestVersion) {
-//                    return $currentVersion < $latestVersion;
-//                };
-//            }
-//        }
-//    }
+    private function doctor()
+    {
+        $this->getLogger()->info("* Started doctor operation *");
+        $solved = 0;
+        // Removing pundle.yml
+        if (file_exists($this->getDataFolder()."pundle.yml")) {
+            $this->getLogger()->info("Removing pundle.yml...");
+            $solved++;
+        }
+
+        // Fixing config.yml
+        if (isset($this->getConfig()->get("auto_update")['group'])) {
+            $this->getLogger()->info("Fixing config.yml...");
+            unset($this->getConfig()->get("auto_update")['group']);
+            $this->getConfig()->save();
+            $solved++;
+        }
+
+        $this->getLogger()->info("* Fixed $solved problems *");
+    }
 }
