@@ -1,7 +1,7 @@
 <?php
 /**
  * Pundler
- * @version 1.0.0
+ * @version 1.1.0
  * @author MinecrafterJPN
  */
 
@@ -235,14 +235,18 @@ class Pundler extends PluginBase
         // Removing pundle.yml
         if (file_exists($this->getDataFolder()."pundle.yml")) {
             $this->getLogger()->info("Removing pundle.yml...");
+            unlink($this->getDataFolder()."pundle.yml");
             $solved++;
         }
 
         // Fixing config.yml
-        if (isset($this->getConfig()->get("auto_update")['group'])) {
+        $autoUpdate = $this->getConfig()->get("auto_update");
+        if (isset($autoUpdate['group'])) {
             $this->getLogger()->info("Fixing config.yml...");
-            unset($this->getConfig()->get("auto_update")['group']);
-            $this->getConfig()->save();
+            $contents = file_get_contents($this->getDataFolder()."config.yml");
+            $fixedContents = str_replace("# group: (string) target group", "", $contents);
+            $fixedContents = str_replace("group: default", "", $fixedContents);
+            file_put_contents($this->getDataFolder()."config.yml", $fixedContents);
             $solved++;
         }
 
