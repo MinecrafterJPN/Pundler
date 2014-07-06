@@ -33,6 +33,7 @@ class Pundler extends PluginBase
             $this->getLogger()->info("Checking updates automatically...");
             $this->update();
         }
+        $this->getLogger()->info($this->getFile());
     }
 
     public function onDisable()
@@ -77,8 +78,7 @@ class Pundler extends PluginBase
 
 
                     case "update":
-                        $group = isset($args[1]) ? $args[1] : "default";
-                        $this->update($group);
+                        $this->update();
                         break;
 
                     case "search":
@@ -126,7 +126,7 @@ class Pundler extends PluginBase
                 $info = $plugin->find('div.main', 0)->find('.title', 0);
                 $name = $info->find('a', 0)->class === "prefixLink" ? $info->find('a', 1) : $info->find('a', 0);
                 $version = $info->find('.version', 0);
-                $this->repository[$name->plaintext] = array("version" => $version->plaintext);
+                $this->repository[$name->plaintext]["version"] = $version->plaintext;
             }
             $html->clear();
             $pageCount++;
@@ -196,6 +196,9 @@ class Pundler extends PluginBase
         $this->getServer()->getPluginManager()->disablePlugin($plugin);
         if (unlink($this->getServer()->getPluginPath() . $name . ".phar")) {
             $this->getLogger()->info("Successfully removed \"$name\"");
+        } else {
+            $this->getLogger()->error("Failed to remove \"$name\"");
+            $this->getLogger()->error("After removing it manually, restart the server");
         }
     }
 
