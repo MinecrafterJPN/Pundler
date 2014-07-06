@@ -82,10 +82,6 @@ class Pundler extends PluginBase
                         $this->update($group);
                         break;
 
-                    case "doctor":
-                        $this->doctor();
-                        break;
-
                     case "search":
                         if (!isset($args[1])) {
                             $this->getLogger()->error("/pundler search <pluginname>");
@@ -93,6 +89,10 @@ class Pundler extends PluginBase
                         }
                         $name = $args[1];
                         $this->search($name);
+                        break;
+
+                    case "doctor":
+                        $this->doctor();
                         break;
 
                     default:
