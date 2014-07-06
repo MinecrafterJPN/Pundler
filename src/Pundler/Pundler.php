@@ -10,6 +10,7 @@ namespace Pundler;
 use pocketmine\plugin\PluginBase;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
+use pocketmine\utils\TextFormat;
 
 class Pundler extends PluginBase
 {
@@ -62,25 +63,17 @@ class Pundler extends PluginBase
                         break;
 
                     case "install":
-                        $group = isset($args[1]) ? $args[1] : "default";
-                        $this->install($group);
+                        if (!isset($args[1])) {
+                            $this->getLogger()->error("/pundler install <pluginname>");
+                            return true;
+                        }
+                        $name = $args[1];
+                        $this->install($name);
                         break;
 
                     case "update":
                         $group = isset($args[1]) ? $args[1] : "default";
                         $this->update($group);
-                        break;
-
-                    case "clean":
-                        $group = isset($args[1]) ? $args[1] : "default";
-                        $this->clean($group);
-                        break;
-
-                    case "all":
-                        $group = isset($args[1]) ? $args[1] : "default";
-                        $this->install($group);
-                        $this->update($group);
-                        $this->clean($group);
                         break;
 
                     default:
@@ -127,10 +120,22 @@ class Pundler extends PluginBase
         $this->lastFetch = time();
     }
 
-    private function installPlugin($name)
+    private function install($name, $force = false)
     {
-        $this->getLogger()->info("Installing $name (v" . $this->repository[$name]['version'] . ")...");
-        //TODO: APIバージョンの確認 プラグインページにスクレイピングをかける...？
+        if ($this->getServer()->getPluginManager()->getPlugin($name) !== null) {
+            $this->getLogger()->error("\"$name\" is already installed");
+            return;
+        }
+
+        $this->fetchRepository($force);
+
+        if (!isset($this->repository[$name])) {
+            $this->getLogger()->error("\"$name\" dose not exist in the repository!");
+            return;
+        }
+
+        $this->getLogger()->info("Installing $name (" . $this->repository[$name]['version'] . ")...");
+
         $url = $this->repository[$name]['url'];
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -138,6 +143,7 @@ class Pundler extends PluginBase
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         $file = curl_exec($ch);
         curl_close($ch);
+
         if (strstr($file, "__HALT_COMPILER();")) {
             $path = $this->getServer()->getPluginPath() . $name . ".phar";
             file_put_contents($path, $file);
@@ -156,67 +162,59 @@ class Pundler extends PluginBase
             $this->getServer()->getPluginManager()->enablePlugin($this->getServer()->getPluginManager()->getPlugin($name));
             return true;
         } else {
-            $this->getLogger()->error("\"$name\" is not phar file! Skipped installing");
+            $this->getLogger()->error("\"$name\" is not phar file!");
+            $this->getLogger()->error("Failed to install");
             return false;
         }
     }
 
-    private function install($force = false)
-    {
-        $pundle = yaml_parse_file($this->pundlePath);
-        if (!isset($pundle[$group])) {
-            $this->getLogger()->error("Group \"$group\" dose not exist!");
-            return;
-        }
-        $this->fetchRepository($force);
-        $this->getLogger()->info("Target group: $group");
-
-        $targetGroup = $pundle[$group];
-        $numOfInstalledPlugins = 0;
-
-        foreach ($targetGroup as $name => $info) {
-            if ($name === "Pundler") continue;
-
-            if ($this->getServer()->getPluginManager()->getPlugin($name) === null) {
-                if (!isset($this->repository[$name])) {
-                    $this->getLogger()->error("\"$name\" dose not exist in the repository!");
-                    $this->getLogger()->error("Skipped installing");
-                } else {
-                    if ($this->installPlugin($name)) $numOfInstalledPlugins++;
-                }
-            }
-        }
-        $this->getLogger()->info("Successfully installed $numOfInstalledPlugins plugins");
-    }
+//    private function install($force = false)
+//    {
+//        $pundle = yaml_parse_file($this->pundlePath);
+//        if (!isset($pundle[$group])) {
+//            $this->getLogger()->error("Group \"$group\" dose not exist!");
+//            return;
+//        }
+//        $this->fetchRepository($force);
+//        $this->getLogger()->info("Target group: $group");
+//
+//        $targetGroup = $pundle[$group];
+//        $numOfInstalledPlugins = 0;
+//
+//        foreach ($targetGroup as $name => $info) {
+//            if ($name === "Pundler") continue;
+//
+//
+//        }
+//        $this->getLogger()->info("Successfully installed $numOfInstalledPlugins plugins");
+//    }
 
     private function update($force = false)
     {
-        $pundle = yaml_parse_file($this->pundlePath);
-        if (!isset($pundle[$group])) {
-            $this->getLogger()->error("Group \"$group\" dose not exist!");
-            return;
-        }
         $this->fetchRepository($force);
-        $this->getLogger()->info("Target group: $group");
 
-        $targetGroup = $pundle[$group];
-        $numOfUpdatedPlugins = 0;
+        $numOfUpdated = 0;
 
         foreach ($this->getServer()->getPluginManager()->getPlugins() as $name => $plugin) {
             if ($name === "Pundler") continue;
 
-            if (isset($targetGroup[$name]) and isset($this->repository[$name])) {
-                $currentVersion = $plugin->getDescription()->getVersion();
-                $needUpdate = $this->analyzeVersionString($targetGroup[$name]["version"]);
-                $latestVersion = $this->repository[$name]["version"];
-                if ($needUpdate($currentVersion, $latestVersion)) {
-                    $this->getServer()->getPluginManager()->disablePlugin($plugin);
-                    unlink($this->getServer()->getPluginPath() . $name . ".phar");
-                    if ($this->installPlugin($name)) $numOfUpdatedPlugins++;
-                }
+            if (!isset($this->repository[$name])) {
+                $this->getLogger()->error("\"$name\" dose not exist in the repository!");
+                $this->getLogger()->error("Failed to update");
+                continue;
+            }
+
+            $currentVersion = $plugin->getDescription()->getVersion();
+            $latestVersion = $this->repository[$name]["version"];
+            if ($currentVersion < $latestVersion) {
+                $this->getLogger()->info("Updating \"$name\"...");
+                $this->getServer()->getPluginManager()->disablePlugin($plugin);
+                unlink($this->getServer()->getPluginPath() . $name . ".phar");
+                $this->installPlugin($name);
+                $numOfUpdated++;
             }
         }
-        $this->getLogger()->info("Successfully updated $numOfUpdatedPlugins plugins");
+        $this->getLogger()->info("Successfully updated $numOfUpdated plugins");
     }
 
 //    private function clean()
