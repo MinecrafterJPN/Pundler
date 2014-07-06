@@ -35,7 +35,7 @@ class Pundler extends PluginBase
 
         if ($this->getConfig()->get("auto_update")['at_startup']) {
             $this->getLogger()->info("Checking updates automatically...");
-            $this->update($this->getConfig()->get("auto_update")['group'], true);
+            $this->update(true);
         }
     }
 
@@ -43,7 +43,7 @@ class Pundler extends PluginBase
     {
         if ($this->getConfig()->get("auto_update")['at_shutdown']) {
             $this->getLogger()->info("Checking updates automatically...");
-            $this->update($this->getConfig()->get("auto_update")["group"], true);
+            $this->update(true);
         }
     }
 
@@ -161,7 +161,7 @@ class Pundler extends PluginBase
         }
     }
 
-    private function install($group, $force = false)
+    private function install($force = false)
     {
         $pundle = yaml_parse_file($this->pundlePath);
         if (!isset($pundle[$group])) {
@@ -189,7 +189,7 @@ class Pundler extends PluginBase
         $this->getLogger()->info("Successfully installed $numOfInstalledPlugins plugins");
     }
 
-    private function update($group, $force = false)
+    private function update($force = false)
     {
         $pundle = yaml_parse_file($this->pundlePath);
         if (!isset($pundle[$group])) {
@@ -219,90 +219,90 @@ class Pundler extends PluginBase
         $this->getLogger()->info("Successfully updated $numOfUpdatedPlugins plugins");
     }
 
-    private function clean($group)
-    {
-        $pundle = yaml_parse_file($this->pundlePath);
-        if (!isset($pundle[$group])) {
-            $this->getLogger()->error("Group \"$group\" dose not exist!");
-            return;
-        }
-        $this->getLogger()->info("Target group: $group");
-        $targetGroup = $pundle[$group];
-        $numOfCleanedPlugins = 0;
-
-        foreach ($this->getServer()->getPluginManager()->getPlugins() as $name => $plugin) {
-            if ($name === "Pundler") continue;
-
-            $found = false;
-            foreach ($targetGroup as $n => $info) {
-                if ($name === $n) {
-                    $found = true;
-                    break;
-                }
-            }
-            if (!$found) {
-                $this->getLogger()->info("Uninstalling $name...");
-                $this->getServer()->getPluginManager()->disablePlugin($plugin);
-                if (unlink($this->getServer()->getPluginPath() . $name . ".phar")) $numOfCleanedPlugins++;
-            }
-        }
-        $this->getLogger()->info("Successfully cleaned $numOfCleanedPlugins plugins");
-
-    }
-
-    private function analyzeVersionString($string)
-    {
-        $info = explode(" ", $string);
-        if (is_numeric($info[0])) {
-            $version1 = $info[0];
-            if (isset($info[1]) and $info[1] === "~" and isset($info[2]) and is_numeric($info[2])) {
-                $version2 = $info[2];
-                return function($currentVersion, $latestVersion) use($version1, $version2) {
-                    return ($version1 <= $latestVersion and $latestVersion <= $version2 and $currentVersion < $latestVersion);
-                };
-
-            } else {
-                //TODO: 最新版が指定バージョンより新しい場合、Historyページを探して指定バージョンをインストールするようにする
-                return function($currentVersion, $latestVersion) use($version1) {
-                    return ($latestVersion === $version1) and ($currentVersion !== $version1);
-                };
-            }
-
-        } else {
-            if (isset($info[1])) {
-                $condition = $info[0];
-                $version = $info[1];
-                switch ($condition) {
-                    case ">":
-                        return function($currentVersion, $latestVersion) use($version) {
-                            return ($latestVersion > $version) and ($currentVersion < $latestVersion);
-                        };
-
-                    case ">=":
-                        return function($currentVersion, $latestVersion) use($version) {
-                            return ($latestVersion >= $version) and ($currentVersion < $latestVersion);
-                        };
-
-                    case "<":
-                        return function($currentVersion, $latestVersion) use($version) {
-                            return ($latestVersion < $version) and ($currentVersion < $latestVersion);
-                        };
-
-                    case "<=":
-                        return function($currentVersion, $latestVersion) use($version) {
-                            return ($latestVersion <= $version) and ($currentVersion < $latestVersion);
-                        };
-
-                    default:
-                        return function($currentVersion, $latestVersion) {
-                            return ($currentVersion < $latestVersion);
-                        };
-                }
-            } else {
-                return function($currentVersion, $latestVersion) {
-                    return $currentVersion < $latestVersion;
-                };
-            }
-        }
-    }
+//    private function clean()
+//    {
+//        $pundle = yaml_parse_file($this->pundlePath);
+//        if (!isset($pundle[$group])) {
+//            $this->getLogger()->error("Group \"$group\" dose not exist!");
+//            return;
+//        }
+//        $this->getLogger()->info("Target group: $group");
+//        $targetGroup = $pundle[$group];
+//        $numOfCleanedPlugins = 0;
+//
+//        foreach ($this->getServer()->getPluginManager()->getPlugins() as $name => $plugin) {
+//            if ($name === "Pundler") continue;
+//
+//            $found = false;
+//            foreach ($targetGroup as $n => $info) {
+//                if ($name === $n) {
+//                    $found = true;
+//                    break;
+//                }
+//            }
+//            if (!$found) {
+//                $this->getLogger()->info("Uninstalling $name...");
+//                $this->getServer()->getPluginManager()->disablePlugin($plugin);
+//                if (unlink($this->getServer()->getPluginPath() . $name . ".phar")) $numOfCleanedPlugins++;
+//            }
+//        }
+//        $this->getLogger()->info("Successfully cleaned $numOfCleanedPlugins plugins");
+//
+//    }
+//
+//    private function analyzeVersionString($string)
+//    {
+//        $info = explode(" ", $string);
+//        if (is_numeric($info[0])) {
+//            $version1 = $info[0];
+//            if (isset($info[1]) and $info[1] === "~" and isset($info[2]) and is_numeric($info[2])) {
+//                $version2 = $info[2];
+//                return function($currentVersion, $latestVersion) use($version1, $version2) {
+//                    return ($version1 <= $latestVersion and $latestVersion <= $version2 and $currentVersion < $latestVersion);
+//                };
+//
+//            } else {
+//                //TODO: 最新版が指定バージョンより新しい場合、Historyページを探して指定バージョンをインストールするようにする
+//                return function($currentVersion, $latestVersion) use($version1) {
+//                    return ($latestVersion === $version1) and ($currentVersion !== $version1);
+//                };
+//            }
+//
+//        } else {
+//            if (isset($info[1])) {
+//                $condition = $info[0];
+//                $version = $info[1];
+//                switch ($condition) {
+//                    case ">":
+//                        return function($currentVersion, $latestVersion) use($version) {
+//                            return ($latestVersion > $version) and ($currentVersion < $latestVersion);
+//                        };
+//
+//                    case ">=":
+//                        return function($currentVersion, $latestVersion) use($version) {
+//                            return ($latestVersion >= $version) and ($currentVersion < $latestVersion);
+//                        };
+//
+//                    case "<":
+//                        return function($currentVersion, $latestVersion) use($version) {
+//                            return ($latestVersion < $version) and ($currentVersion < $latestVersion);
+//                        };
+//
+//                    case "<=":
+//                        return function($currentVersion, $latestVersion) use($version) {
+//                            return ($latestVersion <= $version) and ($currentVersion < $latestVersion);
+//                        };
+//
+//                    default:
+//                        return function($currentVersion, $latestVersion) {
+//                            return ($currentVersion < $latestVersion);
+//                        };
+//                }
+//            } else {
+//                return function($currentVersion, $latestVersion) {
+//                    return $currentVersion < $latestVersion;
+//                };
+//            }
+//        }
+//    }
 }
