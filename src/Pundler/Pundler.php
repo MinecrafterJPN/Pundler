@@ -67,6 +67,16 @@ class Pundler extends PluginBase
                         $this->install($name);
                         break;
 
+                    case "remove":
+                        if (!isset($args[1])) {
+                            $this->getLogger()->error("/pundler remove <pluginname>");
+                            return true;
+                        }
+                        $name = $args[1];
+                        $this->remove($name);
+                        break;
+
+
                     case "update":
                         $group = isset($args[1]) ? $args[1] : "default";
                         $this->update($group);
@@ -176,6 +186,19 @@ class Pundler extends PluginBase
             return false;
         }
     }
+    private function remove($name)
+    {
+        $this->getLogger()->info("Removing \"$name\"...");
+        $plugin = $this->getServer()->getPluginManager()->getPlugin($name);
+        if ($plugin === null) {
+            $this->getLogger()->error("\"$name\" is not installed for your server");
+            return;
+        }
+        $this->getServer()->getPluginManager()->disablePlugin($plugin);
+        if (unlink($this->getServer()->getPluginPath() . $name . ".phar")) {
+            $this->getLogger()->info("Successfully removed \"$name\"");
+        }
+    }
 
     private function update()
     {
@@ -228,6 +251,7 @@ class Pundler extends PluginBase
 
     private function search($name)
     {
+        $this->fetchRepository();
         $this->getLogger()->info("Searching \"$name\"...");
         $found = 0;
         foreach (array_keys($this->repository) as $pluginname) {
