@@ -3,7 +3,6 @@
 # at_startup: (bool) Check at startup
 # at_shutdown: (bool) Check at shutdown
 auto_update:
- group: default
  at_startup: false
  at_shutdown: false
 
