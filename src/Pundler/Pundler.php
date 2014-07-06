@@ -76,6 +76,15 @@ class Pundler extends PluginBase
                         $this->doctor();
                         break;
 
+                    case "search":
+                        if (!isset($args[1])) {
+                            $this->getLogger()->error("/pundler search <pluginname>");
+                            return true;
+                        }
+                        $name = $args[1];
+                        $this->search($name);
+                        break;
+
                     default:
                         return false;
                 }
@@ -144,7 +153,7 @@ class Pundler extends PluginBase
         $file = curl_exec($ch);
         curl_close($ch);
 
-        if (strstr($file, "__HALT_COMPILER();")) {
+        if (strpos($file, "__HALT_COMPILER();")) {
             $path = $this->getServer()->getPluginPath() . $name . ".phar";
             file_put_contents($path, $file);
             $dependList = $this->getServer()->getPluginManager()->loadPlugin($path)->getDescription()->getDepend();
@@ -215,5 +224,18 @@ class Pundler extends PluginBase
         }
 
         $this->getLogger()->info("* Fixed $solved problems *");
+    }
+
+    private function search($name)
+    {
+        $this->getLogger()->info("Searching \"$name\"...");
+        $found = 0;
+        foreach (array_keys($this->repository) as $pluginname) {
+            if (strpos($pluginname, $name) !== false) {
+                $this->getLogger()->info($pluginname);
+                $found++;
+            }
+        }
+        $this->getLogger()->info("Found $found plugins");
     }
 }
