@@ -33,7 +33,6 @@ class Pundler extends PluginBase
             $this->getLogger()->info("Checking updates automatically...");
             $this->update();
         }
-        $this->getLogger()->info($this->getFile());
     }
 
     public function onDisable()
