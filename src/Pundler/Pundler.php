@@ -10,7 +10,6 @@ namespace Pundler;
 use pocketmine\plugin\PluginBase;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\utils\TextFormat;
 
 class Pundler extends PluginBase
 {
@@ -143,14 +142,14 @@ class Pundler extends PluginBase
     {
         if ($this->getServer()->getPluginManager()->getPlugin($name) !== null) {
             $this->getLogger()->error("\"$name\" is already installed");
-            return;
+            return false;
         }
 
         $this->fetchRepository();
 
         if (!isset($this->repository[$name])) {
             $this->getLogger()->error("\"$name\" dose not exist in the repository!");
-            return;
+            return false;
         }
 
         $this->getLogger()->info("Installing $name (" . $this->repository[$name]['version'] . ")...");
@@ -174,7 +173,7 @@ class Pundler extends PluginBase
                     if (!isset($this->repository[$depend])) {
                         $this->getLogger()->error("\"$depend\" dose not exist!");
                     } else {
-                        $this->installPlugin($depend);
+                        $this->install($depend);
                     }
                 }
             }
@@ -221,7 +220,7 @@ class Pundler extends PluginBase
                 $this->getLogger()->info("Updating \"$name\"...");
                 $this->getServer()->getPluginManager()->disablePlugin($plugin);
                 unlink($this->getServer()->getPluginPath() . $name . ".phar");
-                $this->installPlugin($name);
+                $this->install($name);
                 $numOfUpdated++;
             }
         }
