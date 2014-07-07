@@ -125,6 +125,7 @@ class Pundler extends PluginBase
                 $info = $plugin->find('div.main', 0)->find('.title', 0);
                 $name = $info->find('a', 0)->class === "prefixLink" ? $info->find('a', 1) : $info->find('a', 0);
                 $version = $info->find('.version', 0);
+                if (isset($this->repository[$name->plaintext]) and $version->plaintext <= $this->repository[$name->plaintext]["version"]) continue;
                 $this->repository[$name->plaintext]["version"] = $version->plaintext;
             }
             $html->clear();
