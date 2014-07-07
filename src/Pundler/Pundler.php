@@ -53,16 +53,6 @@ class Pundler extends PluginBase
             case "pundler":
                 $option = strtolower($args[0]);
                 switch ($option) {
-                    case "test":
-                        $target = $args[1];
-                        foreach (new \DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
-                            $pattern = '/^'.$target.'.*\.phar/';
-                            print($file->getFileName());
-                            if (preg_match($pattern, $file->getFileName())) {
-                                print($file->getPathname()." : HIT!");
-                            }
-                        }
-                        break;
                     case "fetch":
                         $this->fetchRepository(true);
                         break;
@@ -282,7 +272,7 @@ class Pundler extends PluginBase
         $this->getLogger()->info("Searching \"$name\"...");
         $found = 0;
         foreach (array_keys($this->repository) as $pluginname) {
-            if (strpos($pluginname, $name) !== false) {
+            if (stripos($pluginname, $name) !== false) {
                 $this->getLogger()->info($pluginname);
                 $found++;
             }
