@@ -163,7 +163,7 @@ class Pundler extends PluginBase
         curl_close($ch);
 
         if (strpos($file, "__HALT_COMPILER();")) {
-            $path = $this->getServer()->getPluginPath() . $name . ".phar";
+            $path = $this->getServer()->getPluginPath() . $name . "_v" . $this->repository[$name]['version'] .".phar";
             file_put_contents($path, $file);
             $dependList = $this->getServer()->getPluginManager()->loadPlugin($path)->getDescription()->getDepend();
             if (!empty($dependList)) {
