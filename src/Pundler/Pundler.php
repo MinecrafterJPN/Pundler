@@ -13,7 +13,7 @@ use pocketmine\command\CommandSender;
 
 class Pundler extends PluginBase
 {
-    private $lastFetch, $repository;
+    private $lastFetch, $repository, $updateList;
 
     public function onLoad()
     {
@@ -53,6 +53,16 @@ class Pundler extends PluginBase
             case "pundler":
                 $option = strtolower($args[0]);
                 switch ($option) {
+                    case "test":
+                        $target = $args[1];
+                        foreach (new \DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
+                            $pattern = '/^'.$target.'.*\.phar/';
+                            print($file->getFileName());
+                            if (preg_match($pattern, $file->getFileName())) {
+                                print($file->getPathname()." : HIT!");
+                            }
+                        }
+                        break;
                     case "fetch":
                         $this->fetchRepository(true);
                         break;
@@ -125,7 +135,7 @@ class Pundler extends PluginBase
                 $info = $plugin->find('div.main', 0)->find('.title', 0);
                 $name = $info->find('a', 0)->class === "prefixLink" ? $info->find('a', 1) : $info->find('a', 0);
                 $version = $info->find('.version', 0);
-                if (isset($this->repository[$name->plaintext]) and $version->plaintext <= $this->repository[$name->plaintext]["version"]) continue;
+                //if (isset($this->repository[$name->plaintext]) and $version->plaintext <= $this->repository[$name->plaintext]["version"]) continue;
                 $this->repository[$name->plaintext]["version"] = $version->plaintext;
             }
             $html->clear();
@@ -140,7 +150,7 @@ class Pundler extends PluginBase
 
     private function install($name)
     {
-        if ($this->getServer()->getPluginManager()->getPlugin($name) !== null) {
+        if ($this->getServer()->getPluginManager()->getPlugin($name) !== null and !in_array($name, $this->updateList)) {
             $this->getLogger()->error("\"$name\" is already installed");
             return false;
         }
@@ -213,18 +223,29 @@ class Pundler extends PluginBase
 
             if (!isset($this->repository[$name])) {
                 $this->getLogger()->error("\"$name\" dose not exist in the repository!");
-                $this->getLogger()->error("Failed to update");
                 continue;
             }
-
             $currentVersion = $plugin->getDescription()->getVersion();
             $latestVersion = $this->repository[$name]["version"];
             if ($currentVersion < $latestVersion) {
                 $this->getLogger()->info("Updating \"$name\"...");
                 $this->getServer()->getPluginManager()->disablePlugin($plugin);
-                unlink($this->getServer()->getPluginPath() . $name . ".phar");
-                $this->install($name);
-                $numOfUpdated++;
+                $updated = false;
+                foreach (new \DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
+                    $pattern = '/^'.$name.'.*\.phar/';
+                    if (preg_match($pattern, $file->getFileName())) {
+                        unlink($file->getPathname());
+                        $this->updateList[] = $name;
+                        if ($this->install($name)) {
+                            $numOfUpdated++;
+                            $updated = true;
+                        }
+                        break;
+                    }
+                }
+                if (!$updated) {
+                    $this->getLogger()->error("Failed to update");
+                }
             }
         }
         $this->getLogger()->info("Successfully updated $numOfUpdated plugins");
