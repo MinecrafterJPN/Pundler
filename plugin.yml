@@ -1,10 +1,10 @@
 name: Pundler
 main: Pundler\Pundler
-version: 1.1.0
+version: 1.2
 api: [1.0.0]
 load: POSTWORLD
 author: MinecrafterJPN
-description: Manage your plugins simply
+description: Manage your plugins simply and easily
 commands:
  pundler:
   description: Pundler command
