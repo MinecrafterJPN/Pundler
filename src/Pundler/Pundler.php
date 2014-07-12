@@ -40,7 +40,6 @@ class Pundler extends PluginBase
         $this->reloadConfig();
 
         $this->repository = array();
-
         $this->lastFetchTime = 0;
         $this->lastFetchTask = null;
         $this->currentOperation = self::OPERATION_NULL;
@@ -88,14 +87,13 @@ class Pundler extends PluginBase
                         $this->remove($name);
                         break;
 
-
                     case "update":
                         $this->prepareForUpdate();
                         break;
 
                     case "search":
                         if (!isset($args[1])) {
-                            $this->getLogger()->error("/pundler search <pluginname>");
+                            $this->getLogger()->error("/pundler search <keyword>");
                             return true;
                         }
                         $keyword = $args[1];
@@ -121,7 +119,7 @@ class Pundler extends PluginBase
     {
         if (time() - $this->lastFetchTime <= $this->getConfig()->get("minimum_fetch_interval")) {
             $this->getLogger()->info("Skipped fetching repository...");
-            $this->continueCurrentTask($this->repository);
+            $this->continueCurrentTask(false);
             return;
         }
         $this->getLogger()->info("Fetching repository...");
@@ -166,10 +164,12 @@ class Pundler extends PluginBase
         $this->fetchRepository();
     }
 
-    public function continueCurrentTask(array $repository)
+    public function continueCurrentTask($repository)
     {
-        $this->lastFetchTime = time();
-        $this->repository = $repository;
+        if (is_array($repository)) {
+            $this->lastFetchTime = time();
+            $this->repository = $repository;
+        }
         switch ($this->currentOperation) {
             case self::OPERATION_NULL:
                 break;
