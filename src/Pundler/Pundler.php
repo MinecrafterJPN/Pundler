@@ -17,6 +17,7 @@ class Pundler extends PluginBase
     const OPERATION_NULL = -1;
     const OPERATION_INSTALL = 0;
     const OPERATION_UPDATE = 1;
+    const OPERATION_SEARCH = 2;
 
     /** @var  array */
     private $repository;
@@ -153,9 +154,18 @@ class Pundler extends PluginBase
         }
         $this->currentOperation = self::OPERATION_UPDATE;
         $this->fetchRepository();
-        return true;
     }
 
+    private function prepareForSearch($keyword)
+    {
+        if (!$this->lastFetchTask->isFinished()) {
+            $this->getLogger()->error("Wait for the finish of a previous task");
+            return;
+        }
+        $this->currentOperation = self::OPERATION_SEARCH;
+        $this->argsForOperation = array($keyword);
+        $this->fetchRepository();
+    }
 
     public function continueCurrentTask(array $repository)
     {
