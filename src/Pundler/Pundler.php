@@ -130,7 +130,7 @@ class Pundler extends PluginBase
 
     private function prepareForInstall($name)
     {
-        if (!$this->lastFetchTask->isFinished()) {
+        if ($this->lastFetchTask instanceof AsyncFetchTask and !$this->lastFetchTask->isFinished()) {
             $this->getLogger()->error("Wait for the finish of a previous task");
             return;
         }
@@ -145,7 +145,7 @@ class Pundler extends PluginBase
 
     private function prepareForUpdate()
     {
-        if (!$this->lastFetchTask->isFinished()) {
+        if ($this->lastFetchTask instanceof AsyncFetchTask and !$this->lastFetchTask->isFinished()) {
             $this->getLogger()->error("Wait for the finish of a previous task");
             return;
         }
@@ -155,7 +155,7 @@ class Pundler extends PluginBase
 
     private function prepareForSearch($keyword)
     {
-        if (!$this->lastFetchTask->isFinished()) {
+        if ($this->lastFetchTask instanceof AsyncFetchTask and !$this->lastFetchTask->isFinished()) {
             $this->getLogger()->error("Wait for the finish of a previous task");
             return;
         }
