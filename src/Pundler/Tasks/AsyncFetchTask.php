@@ -38,7 +38,7 @@ class AsyncFetchTask extends AsyncTask
             $html->clear();
             $pageCount++;
         }
-        $json = json_decode(file_get_contents($this->api, true))["resources"];
+        $json = json_decode(file_get_contents($this->api), true)["resources"];
         foreach ($json as $value) {
             $this->repository[$value['title']]["url"] = "http://forums.pocketmine.net/index.php?plugins/" . $value['title'] . "." . $value['id'] . "/download&version=" . $value['version_id'];
         }
