@@ -98,8 +98,8 @@ class Pundler extends PluginBase
                             $this->getLogger()->error("/pundler search <pluginname>");
                             return true;
                         }
-                        $name = $args[1];
-                        $this->prepareForSearch();
+                        $keyword = $args[1];
+                        $this->prepareForSearch($keyword);
                         break;
 
                     case "doctor":
@@ -228,13 +228,20 @@ class Pundler extends PluginBase
     private function remove($name)
     {
         $this->getLogger()->info("Removing \"$name\"...");
-        $plugin = $this->getServer()->getPluginManager()->getPlugin($name);
-        if ($plugin === null) {
+        if (($plugin = $this->getServer()->getPluginManager()->getPlugin($name)) === null) {
             $this->getLogger()->error("\"$name\" is not installed for your server");
             return;
         }
         $this->getServer()->getPluginManager()->disablePlugin($plugin);
-        if (unlink($this->getServer()->getPluginPath() . $name . ".phar")) {
+        $removed = false;
+        foreach (new \DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
+            $pattern = '/^'.$name.'.*\.phar/';
+            if (preg_match($pattern, $file->getFileName())) {
+                if (unlink($file->getPathname())) $removed = true;
+                break;
+            }
+        }
+        if ($removed) {
             $this->getLogger()->info("Successfully removed \"$name\"");
         } else {
             $this->getLogger()->error("Failed to remove \"$name\"");
