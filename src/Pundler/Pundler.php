@@ -128,7 +128,6 @@ class Pundler extends PluginBase
 
         $this->lastFetchTask = new AsyncFetchTask();
         $this->getServer()->getScheduler()->scheduleAsyncTask($this->lastFetchTask);
-
     }
 
     private function prepareForInstall($name)
@@ -179,6 +178,9 @@ class Pundler extends PluginBase
                 break;
             case self::OPERATION_UPDATE:
                 $this->update();
+                break;
+            case self::OPERATION_SEARCH:
+                $this->search(array_shift($this->argsForOperation));
                 break;
         }
     }
@@ -246,11 +248,8 @@ class Pundler extends PluginBase
 
         foreach ($this->getServer()->getPluginManager()->getPlugins() as $name => $plugin) {
             if ($name === "Pundler") continue;
+            if (!isset($this->repository[$name])) continue;
 
-            if (!isset($this->repository[$name])) {
-                $this->getLogger()->error("\"$name\" dose not exist in the repository!");
-                continue;
-            }
             $currentVersion = $plugin->getDescription()->getVersion();
             $latestVersion = $this->repository[$name]["version"];
             if ($currentVersion < $latestVersion) {
@@ -276,6 +275,20 @@ class Pundler extends PluginBase
         $this->getLogger()->info("Successfully updated $numOfUpdated plugins");
     }
 
+    private function search($keyword)
+    {
+        $this->fetchRepository();
+        $this->getLogger()->info("Searching \"$keyword\"...");
+        $found = 0;
+        foreach (array_keys($this->repository) as $pluginname) {
+            if (stripos($pluginname, $keyword) !== false) {
+                $this->getLogger()->info($pluginname);
+                $found++;
+            }
+        }
+        $this->getLogger()->info("Found $found plugins");
+    }
+
     private function doctor()
     {
         $this->getLogger()->info("* Started doctor operation *");
@@ -299,19 +312,5 @@ class Pundler extends PluginBase
         }
 
         $this->getLogger()->info("* Fixed $solved problems *");
-    }
-
-    private function search($name)
-    {
-        $this->fetchRepository();
-        $this->getLogger()->info("Searching \"$name\"...");
-        $found = 0;
-        foreach (array_keys($this->repository) as $pluginname) {
-            if (stripos($pluginname, $name) !== false) {
-                $this->getLogger()->info($pluginname);
-                $found++;
-            }
-        }
-        $this->getLogger()->info("Found $found plugins");
     }
 }
