@@ -17,7 +17,17 @@ class Pundler extends PluginBase
     const OPERATION_NULL = -1;
     const OPERATION_INSTALL = 0;
     const OPERATION_UPDATE = 1;
-    private $lastFetchTime, $repository, $currentOperation, $argsForOperation, $lastFetchTask;
+
+    /** @var  array */
+    private $repository;
+    /** @var  int */
+    private $lastFetchTime;
+    /** @var  AsyncFetchTask */
+    private $lastFetchTask;
+    /** @var  int */
+    private $currentOperation;
+    /** @var  array */
+    private $argsForOperation;
 
     public function onLoad()
     {
@@ -28,15 +38,16 @@ class Pundler extends PluginBase
         $this->saveDefaultConfig();
         $this->reloadConfig();
 
-        $this->lastFetchTime = 0;
         $this->repository = array();
+
+        $this->lastFetchTime = 0;
+        $this->lastFetchTask = null;
         $this->currentOperation = self::OPERATION_NULL;
         $this->argsForOperation = array();
-        $this->lastFetchTask = null;
 
         if ($this->getConfig()->get("auto_update")['at_startup']) {
             $this->getLogger()->info("Checking updates automatically...");
-            $this->update();
+            $this->prepareForUpdate();
         }
     }
 
@@ -44,7 +55,7 @@ class Pundler extends PluginBase
     {
         if ($this->getConfig()->get("auto_update")['at_shutdown']) {
             $this->getLogger()->info("Checking updates automatically...");
-            $this->update();
+            $this->prepareForUpdate();
         }
     }
 
@@ -58,10 +69,6 @@ class Pundler extends PluginBase
             case "pundler":
                 $option = isset($args[0]) ? strtolower($args[0]) : "";
                 switch ($option) {
-                    case "fetch":
-                        $this->fetchRepository();
-                        break;
-
                     case "install":
                         if (!isset($args[1])) {
                             $this->getLogger()->error("/pundler install <pluginname>");
@@ -82,7 +89,7 @@ class Pundler extends PluginBase
 
 
                     case "update":
-                        $this->update();
+                        $this->prepareForUpdate();
                         break;
 
                     case "search":
@@ -91,7 +98,7 @@ class Pundler extends PluginBase
                             return true;
                         }
                         $name = $args[1];
-                        $this->search($name);
+                        $this->prepareForSearch();
                         break;
 
                     case "doctor":
@@ -123,6 +130,33 @@ class Pundler extends PluginBase
 
     }
 
+    private function prepareForInstall($name)
+    {
+        if (!$this->lastFetchTask->isFinished()) {
+            $this->getLogger()->error("Wait for the finish of a previous task");
+            return;
+        }
+        if ($this->getServer()->getPluginManager()->getPlugin($name) !== null) {
+            $this->getLogger()->error("\"$name\" is already installed");
+        }
+
+        $this->currentOperation = self::OPERATION_INSTALL;
+        $this->argsForOperation = array($name);
+        $this->fetchRepository();
+    }
+
+    private function prepareForUpdate()
+    {
+        if (!$this->lastFetchTask->isFinished()) {
+            $this->getLogger()->error("Wait for the finish of a previous task");
+            return;
+        }
+        $this->currentOperation = self::OPERATION_UPDATE;
+        $this->fetchRepository();
+        return true;
+    }
+
+
     public function continueCurrentTask(array $repository)
     {
         $this->lastFetchTime = time();
@@ -137,19 +171,6 @@ class Pundler extends PluginBase
                 $this->update();
                 break;
         }
-    }
-
-    private function prepareForInstall($name)
-    {
-        if ($this->getServer()->getPluginManager()->getPlugin($name) !== null) {
-            $this->getLogger()->error("\"$name\" is already installed");
-            return false;
-        }
-
-        $this->currentOperation = self::OPERATION_INSTALL;
-        $this->argsForOperation = array($name);
-        $this->fetchRepository();
-        return true;
     }
 
     private function install($name)
