@@ -10,10 +10,14 @@ namespace Pundler;
 use pocketmine\plugin\PluginBase;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
+use Pundler\Tasks\AsyncFetchTask;
 
 class Pundler extends PluginBase
 {
-    private $lastFetch, $repository, $updateList;
+    const OPERATION_NULL = -1;
+    const OPERATION_INSTALL = 0;
+    const OPERATION_UPDATE = 1;
+    private $lastFetchTime, $repository, $currentOperation, $argsForOperation, $lastFetchTask;
 
     public function onLoad()
     {
@@ -24,10 +28,11 @@ class Pundler extends PluginBase
         $this->saveDefaultConfig();
         $this->reloadConfig();
 
-        $this->lastFetch = 0;
+        $this->lastFetchTime = 0;
         $this->repository = array();
-
-        require_once("simple_html_dom.php");
+        $this->currentOperation = self::OPERATION_NULL;
+        $this->argsForOperation = array();
+        $this->lastFetchTask = null;
 
         if ($this->getConfig()->get("auto_update")['at_startup']) {
             $this->getLogger()->info("Checking updates automatically...");
@@ -51,10 +56,10 @@ class Pundler extends PluginBase
         }
         switch ($command->getName()) {
             case "pundler":
-                $option = strtolower($args[0]);
+                $option = isset($args[0]) ? strtolower($args[0]) : "";
                 switch ($option) {
                     case "fetch":
-                        $this->fetchRepository(true);
+                        $this->fetchRepository();
                         break;
 
                     case "install":
@@ -63,7 +68,7 @@ class Pundler extends PluginBase
                             return true;
                         }
                         $name = $args[1];
-                        $this->install($name);
+                        $this->prepareForInstall($name);
                         break;
 
                     case "remove":
@@ -106,52 +111,53 @@ class Pundler extends PluginBase
 
     private function fetchRepository()
     {
-        if (time() - $this->lastFetch <= $this->getConfig()->get("minimum_fetch_interval")) {
+        if (time() - $this->lastFetchTime <= $this->getConfig()->get("minimum_fetch_interval")) {
             $this->getLogger()->info("Skipped fetching repository...");
+            $this->continueCurrentTask($this->repository);
             return;
         }
-
         $this->getLogger()->info("Fetching repository...");
 
-        $pageCount = 1;
+        $this->lastFetchTask = new AsyncFetchTask();
+        $this->getServer()->getScheduler()->scheduleAsyncTask($this->lastFetchTask);
 
-        while (true) {
-            $url = "http://forums.pocketmine.net/plugins/?page=" . $pageCount;
-            if (get_headers($url)[0] !== "HTTP/1.1 200 OK") break;
-
-            $html = \file_get_html($url);
-            $pluginList = $html->find('ol.resourceList', 0)->find('li');
-            foreach ($pluginList as $plugin) {
-                $info = $plugin->find('div.main', 0)->find('.title', 0);
-                $name = $info->find('a', 0)->class === "prefixLink" ? $info->find('a', 1) : $info->find('a', 0);
-                $version = $info->find('.version', 0);
-                //if (isset($this->repository[$name->plaintext]) and $version->plaintext <= $this->repository[$name->plaintext]["version"]) continue;
-                $this->repository[$name->plaintext]["version"] = $version->plaintext;
-            }
-            $html->clear();
-            $pageCount++;
-        }
-        $json = json_decode(file_get_contents($this->getConfig()->get("forum_api_url")), true)["resources"];
-        foreach ($json as $value) {
-            $this->repository[$value['title']]["url"] = "http://forums.pocketmine.net/index.php?plugins/" . $value['title'] . "." . $value['id'] . "/download&version=" . $value['version_id'];
-        }
-        $this->lastFetch = time();
     }
 
-    private function install($name)
+    public function continueCurrentTask(array $repository)
     {
-        if ($this->getServer()->getPluginManager()->getPlugin($name) !== null and !in_array($name, $this->updateList)) {
+        $this->lastFetchTime = time();
+        $this->repository = $repository;
+        switch ($this->currentOperation) {
+            case self::OPERATION_NULL:
+                break;
+            case self::OPERATION_INSTALL:
+                $this->install(array_shift($this->argsForOperation));
+                break;
+            case self::OPERATION_UPDATE:
+                $this->update();
+                break;
+        }
+    }
+
+    private function prepareForInstall($name)
+    {
+        if ($this->getServer()->getPluginManager()->getPlugin($name) !== null) {
             $this->getLogger()->error("\"$name\" is already installed");
             return false;
         }
 
+        $this->currentOperation = self::OPERATION_INSTALL;
+        $this->argsForOperation = array($name);
         $this->fetchRepository();
+        return true;
+    }
 
+    private function install($name)
+    {
         if (!isset($this->repository[$name])) {
             $this->getLogger()->error("\"$name\" dose not exist in the repository!");
             return false;
         }
-
         $this->getLogger()->info("Installing $name (" . $this->repository[$name]['version'] . ")...");
 
         $url = $this->repository[$name]['url'];
@@ -185,6 +191,7 @@ class Pundler extends PluginBase
             return false;
         }
     }
+
     private function remove($name)
     {
         $this->getLogger()->info("Removing \"$name\"...");
@@ -204,8 +211,6 @@ class Pundler extends PluginBase
 
     private function update()
     {
-        $this->fetchRepository();
-
         $numOfUpdated = 0;
 
         foreach ($this->getServer()->getPluginManager()->getPlugins() as $name => $plugin) {
@@ -225,7 +230,6 @@ class Pundler extends PluginBase
                     $pattern = '/^'.$name.'.*\.phar/';
                     if (preg_match($pattern, $file->getFileName())) {
                         unlink($file->getPathname());
-                        $this->updateList[] = $name;
                         if ($this->install($name)) {
                             $numOfUpdated++;
                             $updated = true;
