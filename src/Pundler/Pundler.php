@@ -262,21 +262,9 @@ class Pundler extends PluginBase
             if ($currentVersion < $latestVersion) {
                 $this->getLogger()->info("Updating \"$name\"...");
                 $this->getServer()->getPluginManager()->disablePlugin($plugin);
-                $updated = false;
-                foreach (new \DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
-                    $pattern = '/^'.$name.'.*\.phar/';
-                    if (preg_match($pattern, $file->getFileName())) {
-                        unlink($file->getPathname());
-                        if ($this->install($name)) {
-                            $numOfUpdated++;
-                            $updated = true;
-                        }
-                        break;
-                    }
-                }
-                if (!$updated) {
-                    $this->getLogger()->error("Failed to update");
-                }
+                $this->remove($name);
+                if ($this->install($name)) $numOfUpdated++;
+                else $this->getLogger()->error("Failed to update");
             }
         }
         $this->getLogger()->info("Successfully updated $numOfUpdated plugins");
