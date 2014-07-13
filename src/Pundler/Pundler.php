@@ -238,14 +238,12 @@ class Pundler extends PluginBase
         $this->getServer()->getPluginManager()->disablePlugin($plugin);
         $removed = false;
         foreach (new \DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
-            $pattern = '/^'.$name.'.*\.phar/';
-            if (preg_match($pattern, $file->getFileName())) {
-                if (is_dir($file->getFileName())) {
-                    rmdir($file->getPathname());
-                } else {
-                    if (unlink($file->getPathname())) $removed = true;
-                }
+            $pharPattern = '/^'.$name.'.*\.phar/';
+            $directoryPattern = '/^'.$name.'$/';
+            if (preg_match($pharPattern, $file->getFileName())) {
+                if (unlink($file->getPathname())) $removed = true;
             }
+            if (preg_match($directoryPattern, $file->getFileName()) and is_dir($file->getPathname())) rmdir($file->getPathname());
         }
         if ($removed) {
             $this->getLogger()->info("Successfully removed \"$name\"");
