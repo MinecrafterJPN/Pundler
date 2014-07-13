@@ -318,12 +318,9 @@ class Pundler extends PluginBase
         $this->getLogger()->info("* Fixed $solved problems *");
     }
 
-    function removeDir($path)
+    private function removeDir($path)
     {
         $path .= "*";
-        foreach(glob($path) as $file)
-        {
-            @unlink($file);
-        }
+        foreach(glob($path) as $file) @unlink($file);
     }
 }
