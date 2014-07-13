@@ -277,12 +277,15 @@ class Pundler extends PluginBase
     {
         $this->getLogger()->info("Searching \"$keyword\"...");
         $found = 0;
+
+        $this->getLogger()->info("* -------------------------- *");
         foreach (array_keys($this->repository) as $pluginname) {
             if (stripos($pluginname, $keyword) !== false) {
                 $this->getLogger()->info($pluginname);
                 $found++;
             }
         }
+        $this->getLogger()->info("* -------------------------- *");
         $this->getLogger()->info("Found $found plugins");
     }
 
