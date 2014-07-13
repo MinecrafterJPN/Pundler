@@ -275,7 +275,6 @@ class Pundler extends PluginBase
 
     private function search($keyword)
     {
-        $this->fetchRepository();
         $this->getLogger()->info("Searching \"$keyword\"...");
         $found = 0;
         foreach (array_keys($this->repository) as $pluginname) {
