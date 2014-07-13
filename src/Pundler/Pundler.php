@@ -170,6 +170,7 @@ class Pundler extends PluginBase
             $this->lastFetchTime = time();
             $this->repository = $repository;
         }
+        $this->getLogger()->info("Finished fetching!");
         switch ($this->currentOperation) {
             case self::OPERATION_NULL:
                 break;
