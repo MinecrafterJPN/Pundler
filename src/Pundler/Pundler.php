@@ -217,6 +217,7 @@ class Pundler extends PluginBase
                 }
             }
             $this->getServer()->getPluginManager()->enablePlugin($this->getServer()->getPluginManager()->getPlugin($name));
+            $this->getLogger()->info("Successfully installed $name");
             return true;
         } else {
             $this->getLogger()->error("\"$name\" is not phar file!");
