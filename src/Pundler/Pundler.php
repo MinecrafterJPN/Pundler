@@ -243,7 +243,10 @@ class Pundler extends PluginBase
             if (preg_match($pharPattern, $file->getFileName())) {
                 if (unlink($file->getPathname())) $removed = true;
             }
-            if (preg_match($directoryPattern, $file->getFileName()) and is_dir($file->getPathname())) rmdir($file->getPathname());
+            if (preg_match($directoryPattern, $file->getFileName()) and is_dir($file->getPathname())) {
+                $this->removeDir($file->getPathname() .  DIRECTORY_SEPARATOR);
+                rmdir($file->getPathname());
+            }
         }
         if ($removed) {
             $this->getLogger()->info("Successfully removed \"$name\"");
@@ -313,5 +316,14 @@ class Pundler extends PluginBase
         }
 
         $this->getLogger()->info("* Fixed $solved problems *");
+    }
+
+    function removeDir($path)
+    {
+        $path .= "*";
+        foreach(glob($path) as $file)
+        {
+            @unlink($file);
+        }
     }
 }
