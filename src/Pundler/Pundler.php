@@ -169,19 +169,21 @@ class Pundler extends PluginBase
         if (is_array($repository)) {
             $this->lastFetchTime = time();
             $this->repository = $repository;
+            $this->getLogger()->info("Finished fetching!");
         }
-        $this->getLogger()->info("Finished fetching!");
         switch ($this->currentOperation) {
             case self::OPERATION_NULL:
                 break;
             case self::OPERATION_INSTALL:
-                $this->install(array_shift($this->argsForOperation));
+                $name = array_shift($this->argsForOperation);
+                if ($this->install($name)) $this->getLogger()->info("Successfully installed $name");
                 break;
             case self::OPERATION_UPDATE:
                 $this->update();
                 break;
             case self::OPERATION_SEARCH:
-                $this->search(array_shift($this->argsForOperation));
+                $keyword = array_shift($this->argsForOperation);
+                $this->search($keyword);
                 break;
         }
     }
@@ -218,7 +220,6 @@ class Pundler extends PluginBase
                 }
             }
             $this->getServer()->getPluginManager()->enablePlugin($this->getServer()->getPluginManager()->getPlugin($name));
-            $this->getLogger()->info("Successfully installed $name");
             return true;
         } else {
             $this->getLogger()->error("\"$name\" is not phar file!");
@@ -258,10 +259,11 @@ class Pundler extends PluginBase
         foreach ($this->getServer()->getPluginManager()->getPlugins() as $name => $plugin) {
             if ($name === "Pundler") continue;
             if (!isset($this->repository[$name])) continue;
-
             $currentVersion = $plugin->getDescription()->getVersion();
             $latestVersion = $this->repository[$name]["version"];
-            if ($currentVersion < $latestVersion) {
+            $this->getLogger()->info("cv:$currentVersion lv:$latestVersion");
+
+            if (version_compare($currentVersion, $latestVersion) === -1) {
                 $this->getLogger()->info("Updating \"$name\"...");
                 $this->getServer()->getPluginManager()->disablePlugin($plugin);
                 $this->remove($name);
