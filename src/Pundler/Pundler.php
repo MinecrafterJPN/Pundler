@@ -261,7 +261,6 @@ class Pundler extends PluginBase
             if (!isset($this->repository[$name])) continue;
             $currentVersion = $plugin->getDescription()->getVersion();
             $latestVersion = $this->repository[$name]["version"];
-            $this->getLogger()->info("cv:$currentVersion lv:$latestVersion");
 
             if (version_compare($currentVersion, $latestVersion) === -1) {
                 $this->getLogger()->info("Updating \"$name\"...");
