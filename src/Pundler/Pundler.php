@@ -124,7 +124,7 @@ class Pundler extends PluginBase
         }
         $this->getLogger()->info("Fetching repository...");
 
-        $this->lastFetchTask = new AsyncFetchTask($this->getConfig()->get("forum_api_url"));
+        $this->lastFetchTask = new AsyncFetchTask();
         $this->getServer()->getScheduler()->scheduleAsyncTask($this->lastFetchTask);
     }
 

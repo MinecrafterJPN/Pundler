@@ -7,15 +7,9 @@ use pocketmine\Server;
 
 class AsyncFetchTask extends AsyncTask
 {
-    private $api;
-
-    public function __construct($api)
-    {
-        $this->api = $api;
-    }
-
     public function onRun()
     {
+        $apiURL = "http://forums.pocketmine.net/api.php";
         $repository = array();
         require_once("simple_html_dom.php");
 
@@ -37,7 +31,7 @@ class AsyncFetchTask extends AsyncTask
             $html->clear();
             $pageCount++;
         }
-        $json = json_decode(file_get_contents($this->api), true)["resources"];
+        $json = json_decode(file_get_contents($apiURL), true)["resources"];
         foreach ($json as $value) {
             $repository[$value['title']]["url"] = "http://forums.pocketmine.net/index.php?plugins/" . $value['title'] . "." . $value['id'] . "/download&version=" . $value['version_id'];
         }

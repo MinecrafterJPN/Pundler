@@ -10,7 +10,3 @@ auto_update:
 # You should set 1500 ~ 2000 to this value
 # minimum_fetch_interval: (int) second
 minimum_fetch_interval: 1800
-
-# Forum API URL
-# forum_api_url: (string)
-forum_api_url: "http://forums.pocketmine.net/api.php"
