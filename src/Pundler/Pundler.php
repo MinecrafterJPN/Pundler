@@ -240,8 +240,11 @@ class Pundler extends PluginBase
         foreach (new \DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
             $pattern = '/^'.$name.'.*\.phar/';
             if (preg_match($pattern, $file->getFileName())) {
-                if (unlink($file->getPathname())) $removed = true;
-                break;
+                if (is_dir($file->getFileName())) {
+                    rmdir($file->getPathname());
+                } else {
+                    if (unlink($file->getPathname())) $removed = true;
+                }
             }
         }
         if ($removed) {
