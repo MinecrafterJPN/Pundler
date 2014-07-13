@@ -7,17 +7,16 @@ use pocketmine\Server;
 
 class AsyncFetchTask extends AsyncTask
 {
-    private $repository, $api;
+    private $api;
 
     public function __construct($api)
     {
-        parent::__construct();
         $this->api = $api;
     }
 
     public function onRun()
     {
-        $this->repository = array();
+        $repository = array();
         require_once("simple_html_dom.php");
 
         $pageCount = 1;
@@ -33,20 +32,20 @@ class AsyncFetchTask extends AsyncTask
                 $name = $info->find('a', 0)->class === "prefixLink" ? $info->find('a', 1) : $info->find('a', 0);
                 $version = $info->find('.version', 0);
                 //if (isset($this->repository[$name->plaintext]) and $version->plaintext <= $this->repository[$name->plaintext]["version"]) continue;
-                $this->repository[$name->plaintext]["version"] = $version->plaintext;
+                $repository[$name->plaintext]["version"] = $version->plaintext;
             }
             $html->clear();
             $pageCount++;
         }
         $json = json_decode(file_get_contents($this->api), true)["resources"];
         foreach ($json as $value) {
-            $this->repository[$value['title']]["url"] = "http://forums.pocketmine.net/index.php?plugins/" . $value['title'] . "." . $value['id'] . "/download&version=" . $value['version_id'];
+            $repository[$value['title']]["url"] = "http://forums.pocketmine.net/index.php?plugins/" . $value['title'] . "." . $value['id'] . "/download&version=" . $value['version_id'];
         }
-
+        $this->setResult($repository);
     }
 
     public function onCompletion(Server $server)
     {
-        $server->getPluginManager()->getPlugin("Pundler")->continueCurrentTask($this->repository);
+        $server->getPluginManager()->getPlugin("Pundler")->continueCurrentTask($this->getResult());
     }
 }
