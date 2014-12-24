@@ -20,15 +20,15 @@ class Pundler extends PluginBase
     const OPERATION_SEARCH = 2;
 
     /** @var  array */
-    private $repository;
+    private $repository = [];
     /** @var  int */
-    private $lastFetchTime;
+    private $lastFetchTime = 0;
     /** @var  AsyncFetchTask */
-    private $lastFetchTask;
+    private $lastFetchTask = null;
     /** @var  int */
-    private $currentOperation;
+    private $currentOperation = self::OPERATION_NULL;
     /** @var  array */
-    private $argsForOperation;
+    private $argsForOperation = [];
 
     public function onLoad()
     {
@@ -38,12 +38,6 @@ class Pundler extends PluginBase
     {
         $this->saveDefaultConfig();
         $this->reloadConfig();
-
-        $this->repository = array();
-        $this->lastFetchTime = 0;
-        $this->lastFetchTask = null;
-        $this->currentOperation = self::OPERATION_NULL;
-        $this->argsForOperation = array();
 
         if ($this->getConfig()->get("auto_update")['at_startup']) {
             $this->getLogger()->info("Checking updates automatically...");
@@ -131,7 +125,7 @@ class Pundler extends PluginBase
     private function prepareForInstall($name)
     {
         if ($this->lastFetchTask instanceof AsyncFetchTask and !$this->lastFetchTask->isFinished()) {
-            $this->getLogger()->error("Wait for the finish of a previous task");
+            $this->getLogger()->error("Wait for finishing a previous task");
             return;
         }
         if ($this->getServer()->getPluginManager()->getPlugin($name) !== null) {
