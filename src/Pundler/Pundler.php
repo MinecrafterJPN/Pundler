@@ -14,10 +14,14 @@ use Pundler\Tasks\AsyncFetchTask;
 
 class Pundler extends PluginBase
 {
+    // operation constants
     const OPERATION_NULL = -1;
     const OPERATION_INSTALL = 0;
     const OPERATION_UPDATE = 1;
     const OPERATION_SEARCH = 2;
+
+    // prefix constants
+    const OUTDATED_PREFIX = 7;
 
     /** @var  array */
     private $repository = [];
@@ -69,7 +73,12 @@ class Pundler extends PluginBase
                             return true;
                         }
                         $name = $args[1];
-                        $this->prepareForInstall($name);
+                        if ($name == '--url' && isset($args[2])) {
+                            $url = $args[2];
+                            $this->directInstall($url);
+                        } else {
+                            $this->prepareForInstall($name);
+                        }
                         break;
 
                     case "remove":
@@ -120,6 +129,39 @@ class Pundler extends PluginBase
 
         $this->lastFetchTask = new AsyncFetchTask();
         $this->getServer()->getScheduler()->scheduleAsyncTask($this->lastFetchTask);
+    }
+    
+    private function directInstall($url)
+    {
+        $this->getLogger()->info("Downloading '$url' ...");
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        $file = curl_exec($ch);
+        curl_close($ch);
+
+        $filename = basename(curl_getinfo($ch, CURLINFO_EFFECTIVE_URL));
+
+        if (strpos($file, "__HALT_COMPILER();")) {
+            $path = $this->getServer()->getPluginPath() . $filename;
+            file_put_contents($path, $file);
+            $plugin = $this->getServer()->getPluginManager()->loadPlugin($path);
+            $dependList = $plugin->getDescription()->getDepend();
+            $name = $plugin->getDescription()->getName();
+
+            if (!empty($dependList)) {
+                $this->getLogger()->info("Detected some dependencies");
+
+                foreach ($dependList as $depend) {
+                    $this->getLogger()->info($depend);
+                }
+            }
+            $this->getServer()->getPluginManager()->enablePlugin($this->getServer()->getPluginManager()->getPlugin($name));
+        } else {
+            $this->getLogger()->error("\"$filename\" is not phar file!");
+            $this->getLogger()->error("Failed to install");
+        }
     }
 
     private function prepareForInstall($name)
@@ -198,7 +240,7 @@ class Pundler extends PluginBase
         $file = curl_exec($ch);
         curl_close($ch);
 
-        if (strpos($file, "__HALT_COMPILER();")) {
+        if (strpos($file, "__HALT_COMPILER();") && $this->repository[$name]['prefix_id'] !== self::OUTDATED_PREFIX) {
             $path = $this->getServer()->getPluginPath() . trim($name) . "_v" . trim($this->repository[$name]['version']) .".phar";
             file_put_contents($path, $file);
             $dependList = $this->getServer()->getPluginManager()->loadPlugin($path)->getDescription()->getDepend();
@@ -216,7 +258,7 @@ class Pundler extends PluginBase
             $this->getServer()->getPluginManager()->enablePlugin($this->getServer()->getPluginManager()->getPlugin($name));
             return true;
         } else {
-            $this->getLogger()->error("\"$name\" is not phar file!");
+            $this->getLogger()->error("\"$name\" is outdated!");
             $this->getLogger()->error("Failed to install");
             return false;
         }
