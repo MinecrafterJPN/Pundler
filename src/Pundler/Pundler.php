@@ -7,6 +7,7 @@
 
 namespace Pundler;
 
+use DirectoryIterator;
 use pocketmine\plugin\PluginBase;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
@@ -73,9 +74,14 @@ class Pundler extends PluginBase
                             return true;
                         }
                         $name = $args[1];
-                        if ($name == '--url' && isset($args[2])) {
-                            $url = $args[2];
-                            $this->directInstall($url);
+                        if ($name == '--url') {
+                            if (isset($args[2])) {
+                                $url = $args[2];
+                                $this->directInstall($url);
+                            } else {
+                                $this->getLogger()->error("/pundler install --url <URL>");
+                                return true;
+                            }
                         } else {
                             $this->prepareForInstall($name);
                         }
@@ -105,6 +111,39 @@ class Pundler extends PluginBase
 
                     case "doctor":
                         $this->doctor();
+                        break;
+
+                    case 'link':
+                        if (!isset($args[1])) {
+                            $this->getLogger()->error("/pundler link <plugin>");
+                            return true;
+                        }
+                        $pluginname = $args[1];
+                        if (!is_null($plugin = $this->getServer()->getPluginManager()->getPlugin($pluginname))) {
+                            $this->getLogger()->error("'$plugin' has been already loaded");
+                            return true;
+                        }
+                        foreach (new DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
+                            $pharPattern = '/^'.$pluginname.'.*\.phar/';
+                            if (preg_match($pharPattern, $file->getFileName())) {
+                                $this->getServer()->getPluginManager()->loadPlugin($file->getPath());
+                            }
+                        }
+                        break;
+
+                    case 'unlink':
+                        if (!isset($args[1])) {
+                            $this->getLogger()->error("/pundler unlink <plugin>");
+                            return true;
+                        }
+                        $pluginname = $args[1];
+                        if (is_null($plugin = $this->getServer()->getPluginManager()->getPlugin($pluginname))) {
+                            $this->getLogger()->error("'$plugin' is not loaded");
+                            return true;
+                        }
+                        $this->getLogger()->info("Unlinking $pluginname ...");
+                        $this->getServer()->getPluginManager()->disablePlugin($plugin);
+                        $this->getLogger()->info("Successfully unlinked $pluginname");
                         break;
 
                     default:
@@ -138,13 +177,21 @@ class Pundler extends PluginBase
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_HEADERFUNCTION, function($ch, $header) use(&$filename) {
+            $regex = '/Content-Disposition: attachment; filename="(.+?)"/i';
+            if (preg_match($regex, $header, $matches)) {
+                $filename = $matches[1];
+            }
+            return strlen($header);
+        });
         $file = curl_exec($ch);
         curl_close($ch);
 
-        $filename = basename(curl_getinfo($ch, CURLINFO_EFFECTIVE_URL));
-
         if (strpos($file, "__HALT_COMPILER();")) {
             $path = $this->getServer()->getPluginPath() . $filename;
+
+            $this->getLogger()->info($path);
+
             file_put_contents($path, $file);
             $plugin = $this->getServer()->getPluginManager()->loadPlugin($path);
             $dependList = $plugin->getDescription()->getDepend();
@@ -154,7 +201,7 @@ class Pundler extends PluginBase
                 $this->getLogger()->info("Detected some dependencies");
 
                 foreach ($dependList as $depend) {
-                    $this->getLogger()->info($depend);
+                    $this->getLogger()->info("Manually install '$depend'");
                 }
             }
             $this->getServer()->getPluginManager()->enablePlugin($this->getServer()->getPluginManager()->getPlugin($name));
@@ -273,7 +320,7 @@ class Pundler extends PluginBase
         }
         $this->getServer()->getPluginManager()->disablePlugin($plugin);
         $removed = false;
-        foreach (new \DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
+        foreach (new DirectoryIterator($this->getServer()->getPluginPath()) as $file) {
             $pharPattern = '/^'.$name.'.*\.phar/';
             $directoryPattern = '/^'.$name.'$/';
             if (preg_match($pharPattern, $file->getFileName())) {
