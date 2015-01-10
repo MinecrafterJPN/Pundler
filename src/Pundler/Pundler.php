@@ -1,9 +1,4 @@
 <?php
-/**
- * Pundler
- * @version 1.3
- * @author MinecrafterJPN
- */
 
 namespace Pundler;
 
