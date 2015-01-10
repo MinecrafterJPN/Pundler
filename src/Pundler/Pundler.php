@@ -73,8 +73,7 @@ class Pundler extends PluginBase
                             $this->getLogger()->error("/pundler install <pluginname>");
                             return true;
                         }
-                        $name = $args[1];
-                        if ($name == '--url') {
+                        if ($args[1] == '--url') {
                             if (isset($args[2])) {
                                 $url = $args[2];
                                 $this->directInstall($url);
@@ -83,6 +82,7 @@ class Pundler extends PluginBase
                                 return true;
                             }
                         } else {
+                            $name = trim(implode(' ', array_slice($args, 1)));
                             $this->prepareForInstall($name);
                         }
                         break;
