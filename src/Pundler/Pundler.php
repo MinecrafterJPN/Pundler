@@ -285,7 +285,9 @@ class Pundler extends PluginBase
         if (strpos($file, "__HALT_COMPILER();") && $this->repository[$name]['prefix_id'] !== self::OUTDATED_PREFIX) {
             $path = $this->getServer()->getPluginPath() . trim($name) . "_v" . trim($this->repository[$name]['version']) .".phar";
             file_put_contents($path, $file);
-            $dependList = $this->getServer()->getPluginManager()->loadPlugin($path)->getDescription()->getDepend();
+            $loadedPlugin = $this->getServer()->getPluginManager()->loadPlugin($path);
+            $dependList = $loadedPlugin->getDescription()->getDepend();
+            $exactName = $loadedPlugin->getDescription()->getName();
             if (!empty($dependList)) {
                 $this->getLogger()->info("Detected some dependencies");
                 $this->getLogger()->info("Installing the dependencies...");
@@ -297,7 +299,7 @@ class Pundler extends PluginBase
                     }
                 }
             }
-            $this->getServer()->getPluginManager()->enablePlugin($this->getServer()->getPluginManager()->getPlugin($name));
+            $this->getServer()->getPluginManager()->enablePlugin($this->getServer()->getPluginManager()->getPlugin($exactName));
             return true;
         } else {
             $this->getLogger()->error("\"$name\" is outdated!");
