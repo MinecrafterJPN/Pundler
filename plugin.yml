@@ -1,6 +1,6 @@
 name: Pundler
 main: Pundler\Pundler
-version: 1.4
+version: 1.4.1
 api: [1.10.0]
 load: POSTWORLD
 author: MinecrafterJPN
