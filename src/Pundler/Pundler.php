@@ -100,8 +100,8 @@ class Pundler extends PluginBase
                             $this->getLogger()->error("/pundler search <keyword>");
                             return true;
                         }
-                        $keyword = $args[1];
-                        $this->prepareForSearch($keyword);
+                        $keywords = array_slice($args, 1);
+                        $this->prepareForSearch($keywords);
                         break;
 
                     case "doctor":
@@ -231,14 +231,14 @@ class Pundler extends PluginBase
         $this->fetchRepository();
     }
 
-    private function prepareForSearch($keyword)
+    private function prepareForSearch($keywords)
     {
         if ($this->lastFetchTask instanceof AsyncFetchTask and !$this->lastFetchTask->isFinished()) {
             $this->getLogger()->error("Wait for the finish of a previous task");
             return;
         }
         $this->currentOperation = self::OPERATION_SEARCH;
-        $this->argsForOperation = array($keyword);
+        $this->argsForOperation = array($keywords);
         $this->fetchRepository();
     }
 
@@ -260,8 +260,8 @@ class Pundler extends PluginBase
                 $this->update();
                 break;
             case self::OPERATION_SEARCH:
-                $keyword = array_shift($this->argsForOperation);
-                $this->search($keyword);
+                $keywords = array_shift($this->argsForOperation);
+                $this->search($keywords);
                 break;
         }
     }
@@ -357,14 +357,15 @@ class Pundler extends PluginBase
         $this->getLogger()->info("Successfully updated $numOfUpdated plugins");
     }
 
-    private function search($keyword)
+    private function search($keywords)
     {
-        $this->getLogger()->info("Searching \"$keyword\"...");
+        $keywordString = implode(' ', $keywords);
+        $this->getLogger()->info("Searching \"$keywordString\"...");
         $found = 0;
 
         $this->getLogger()->info("* -------------------------- *");
         foreach (array_keys($this->repository) as $pluginname) {
-            if (stripos($pluginname, $keyword) !== false) {
+            if ($this->containKeywords($pluginname, $keywords)) {
                 $this->getLogger()->info($pluginname);
                 $found++;
             }
@@ -402,5 +403,15 @@ class Pundler extends PluginBase
     {
         $path .= "*";
         foreach(glob($path) as $file) @unlink($file);
+    }
+
+    private function containKeywords($target, $keywords)
+    {
+        foreach ($keywords as $keyword) {
+            if (stripos($target, $keyword) === false) {
+                return false;
+            }
+        }
+        return true;
     }
 }
