@@ -87,7 +87,7 @@ class Pundler extends PluginBase
                             $this->getLogger()->error("/pundler remove <pluginname>");
                             return true;
                         }
-                        $name = $args[1];
+                        $name = trim(implode(' ', array_slice($args, 1)));
                         $this->remove($name);
                         break;
 
@@ -408,9 +408,7 @@ class Pundler extends PluginBase
     private function containKeywords($target, $keywords)
     {
         foreach ($keywords as $keyword) {
-            if (stripos($target, $keyword) === false) {
-                return false;
-            }
+            if (stripos($target, $keyword) === false) return false;
         }
         return true;
     }

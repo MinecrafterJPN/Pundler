@@ -8,7 +8,7 @@ description: Manage your plugins simply and easily
 commands:
  pundler:
   description: Pundler command
-  usage: "/pundler <install | update | remove | search | doctor>"
+  usage: /pundler <install | update | remove | search | doctor>
   permission: pundler.command
 permissions:
  pundler:
