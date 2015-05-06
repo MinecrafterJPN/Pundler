@@ -81,7 +81,7 @@ class Pundler extends PluginBase
                         } else if ($args[1] == '--list') {
                             $filePath = $this->getDataFolder() . 'plugin.list';
                             if (!file_exists($filePath)) {
-                                $this->getLogger()->error("list.yml file dose not exist!");
+                                $this->getLogger()->error("plugin.list file dose not exist!");
                                 break;
                             }
                             $this->prepareForInstallFromList($filePath);
@@ -151,7 +151,13 @@ class Pundler extends PluginBase
                         break;
 
                     case 'output':
-                        // TODO: output list file
+                        $filePath = $this->getDataFolder() . 'plugin.list';
+                        $config = new Config($filePath, Config::ENUM);
+                        foreach ($this->getServer()->getPluginManager()->getPlugins() as $plugin) {
+                            $config->set($plugin->getName());
+                        }
+                        $config->save();
+                        $this->getLogger()->info("Successfully output plugin list -> Pundler/plugin.list");
                         break;
 
                     default:
