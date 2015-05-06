@@ -6,6 +6,7 @@ use DirectoryIterator;
 use pocketmine\plugin\PluginBase;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
+use pocketmine\utils\Config;
 use Pundler\Tasks\AsyncFetchTask;
 
 class Pundler extends PluginBase
@@ -15,6 +16,7 @@ class Pundler extends PluginBase
     const OPERATION_INSTALL = 0;
     const OPERATION_UPDATE = 1;
     const OPERATION_SEARCH = 2;
+    const OPERATION_INSTALL_FROM_LIST = 3;
 
     // prefix constants
     const OUTDATED_PREFIX = 7;
@@ -76,6 +78,13 @@ class Pundler extends PluginBase
                                 $this->getLogger()->error("/pundler install --url <URL>");
                                 return true;
                             }
+                        } else if ($args[1] == '--list') {
+                            $filePath = $this->getDataFolder() . 'plugin.list';
+                            if (!file_exists($filePath)) {
+                                $this->getLogger()->error("list.yml file dose not exist!");
+                                break;
+                            }
+                            $this->prepareForInstallFromList($filePath);
                         } else {
                             $name = trim(implode(' ', array_slice($args, 1)));
                             $this->prepareForInstall($name);
@@ -139,6 +148,10 @@ class Pundler extends PluginBase
                         $this->getLogger()->info("Unlinking $pluginname ...");
                         $this->getServer()->getPluginManager()->disablePlugin($plugin);
                         $this->getLogger()->info("Successfully unlinked $pluginname");
+                        break;
+
+                    case 'output':
+                        // TODO: output list file
                         break;
 
                     default:
@@ -263,10 +276,14 @@ class Pundler extends PluginBase
                 $keywords = array_shift($this->argsForOperation);
                 $this->search($keywords);
                 break;
+            case self::OPERATION_INSTALL_FROM_LIST:
+                $path = array_shift($this->argsForOperation);
+                $this->installFromList($path);
+                break;
         }
     }
 
-    private function install($name)
+    private function install($name, $version = false)
     {
         if (!isset($this->repository[$name])) {
             $this->getLogger()->error("\"$name\" dose not exist in the repository!");
@@ -411,5 +428,30 @@ class Pundler extends PluginBase
             if (stripos($target, $keyword) === false) return false;
         }
         return true;
+    }
+
+    private function prepareForInstallFromList($listPath)
+    {
+        if ($this->lastFetchTask instanceof AsyncFetchTask and !$this->lastFetchTask->isFinished()) {
+            $this->getLogger()->error("Wait for finishing a previous task");
+            return;
+        }
+
+        $this->currentOperation = self::OPERATION_INSTALL_FROM_LIST;
+        $this->argsForOperation = array($listPath);
+        $this->fetchRepository();
+    }
+
+    private function installFromList($listPath)
+    {
+        $list = new Config($listPath, Config::ENUM);
+        foreach ($list->getAll(true) as $plugin) {
+            if ($this->getServer()->getPluginManager()->getPlugin($plugin) !== null) {
+                $this->getLogger()->info("$plugin has been already installed.");
+                continue;
+            }
+            $this->install($plugin, false);
+        }
+        $this->getLogger()->info("Successfully installed all plugins :)");
     }
 }
